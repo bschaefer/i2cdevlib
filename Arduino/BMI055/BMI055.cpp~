@@ -1,0 +1,142 @@
+// BMI055 I2C Class source
+// Based on BMI055 datasheet BST-BMI055-DS000-06.PDF
+// 
+// 2013/08/18 by Bernhardt Schaefer
+//
+// changelog:
+// 2013/08/18  -  initial release
+
+
+#include "BMI055.h"
+
+/* 
+ Default Constructor
+ */
+BMI055::BMI055() {
+  devAddrAcc  = BMI055_ACC_ADDRESS;
+  devAddrGyr  = BMI055_GYR_ADDRESS; 	
+}
+
+/*
+Specific Address Constructor 
+ */
+BMI055::BMI055(uint8_t addressAcc, uint8_t addressGyro) {
+  devAddrAcc  = addressAcc;
+  devAddrGyr  = addressGyro;
+}
+
+/*
+Initialize with max Range for Acc and Gyro
+ */
+void BMI055::initialize() {
+  setRangeAcc(BMI055_ACC_RANGE_16G);
+  setRangeGyr(BMI055_GYR_RANGE_2000);
+  // setBandwidth();
+}
+
+
+/* 
+ Verify the I2C connection.
+ Make sure the device is connected and responds as expected.
+ True if connection is valid, false otherwise
+ */
+bool BMI055::testConnection() {
+  return ((getDeviceIDAcc() == 0xFA) && (getDeviceIDGyr() == 0x0F));
+}
+
+/*
+This registers could be used to verify the identity of the device
+ BMI055_ACC_BGW_CHIPID	= 0xFA
+ BMI055_GYR_CHIP_ID		= 0x0F
+ */
+uint8_t BMI055::getDeviceIDAcc() {
+  I2Cdev::readByte(devAddrAcc, BMI055_ACC_BGW_CHIPID, buffer);
+  return buffer[0];
+}
+
+uint8_t BMI055::getDeviceIDGyr() {
+  I2Cdev::readByte(devAddrGyr, BMI055_GYR_CHIP_ID, buffer);
+  return buffer[0];
+}
+
+/*
+Set Acc Full Range
+ 0011 = ±2g
+ 0101 = ±4g
+ 1000 = ±8g
+ 1100 = ±16g
+ */
+void BMI055::setRangeAcc(uint8_t range) {
+  I2Cdev::writeBits(devAddrAcc, BMI055_ACC_PMU_RANGE, BMI055_ACC_RANGE_BIT, BMI055_ACC_RANGE_LENGTH, range);
+}
+
+/*
+Set Gyr Full Range
+ 000 = ±2000°/s
+ 001 = ±1000°/s
+ 010 = ± 500°/s
+ 011 = ± 250°/s
+ 100 = ± 125°/s
+ */
+void BMI055::setRangeGyr(uint8_t range) {
+  I2Cdev::writeBits(devAddrGyr, BMI055_GYR_RANGE, BMI055_GYR_RANGE_BIT, BMI055_GYR_RANGE_LENGTH, range);	
+}
+
+uint8_t BMI055::getRangeAcc() {
+  I2Cdev::readBits(devAddrAcc, BMI055_ACC_PMU_RANGE, BMI055_ACC_RANGE_BIT, BMI055_ACC_RANGE_LENGTH, buffer);
+  return buffer[0]; 
+}
+
+uint8_t BMI055::getRangeGyr() {
+  I2Cdev::readBits(devAddrGyr, BMI055_GYR_RANGE, BMI055_GYR_RANGE_BIT, BMI055_GYR_RANGE_LENGTH, buffer);
+  return buffer[0]; 
+}
+
+void BMI055::getAcceleration(int16_t* ax, int16_t* ay, int16_t* az) {
+  I2Cdev::readBytes(devAddrAcc, BMI055_ACC_ACCD_X_LSB, 6, buffer);
+  *ax = ((((int16_t)buffer[1]) << 8) | buffer[0]) >> 4;
+  *ay = ((((int16_t)buffer[3]) << 8) | buffer[2]) >> 4;
+  *az = ((((int16_t)buffer[5]) << 8) | buffer[4]) >> 4;
+}
+
+// TODO: Vielleicht müssen die Bits ausmaskiert werden?
+
+int16_t BMI055::getAccelerationX() {
+  I2Cdev::readBytes(devAddrAcc, BMI055_ACC_ACCD_X_LSB, 2, buffer);
+  return ((((int16_t)buffer[1]) << 8) | buffer[0]) >> 4;
+}
+
+int16_t BMI055::getAccelerationY() {
+  I2Cdev::readBytes(devAddrAcc, BMI055_ACC_ACCD_Y_LSB, 2, buffer);
+  return ((((int16_t)buffer[1]) << 8) | buffer[0]) >> 4;
+}
+
+int16_t BMI055::getAccelerationZ() {
+  I2Cdev::readBytes(devAddrAcc, BMI055_ACC_ACCD_Z_LSB, 2, buffer);
+  return ((((int16_t)buffer[1]) << 8) | buffer[0]) >> 4;
+}
+
+void BMI055::getTurnRate(int16_t* gx, int16_t* gy, int16_t* gz) {
+  I2Cdev::readBytes(devAddrGyr, BMI055_GYR_RATE_X_LSB, 6, buffer);
+  *gx = (((int16_t)buffer[1]) << 8) | buffer[0];	
+  *gy = (((int16_t)buffer[3]) << 8) | buffer[2];
+  *gz = (((int16_t)buffer[5]) << 8) | buffer[4];
+         
+  
+}
+
+int16_t BMI055::getTurnRateX() {
+  I2Cdev::readBytes(devAddrGyr, BMI055_GYR_RATE_X_LSB, 2, buffer);
+  return ((((int16_t)buffer[1]) << 8) | buffer[0]);
+}
+
+int16_t BMI055::getTurnRateY() {
+  I2Cdev::readBytes(devAddrGyr, BMI055_GYR_RATE_Y_LSB, 2, buffer);
+  return ((((int16_t)buffer[1]) << 8) | buffer[0]);
+}
+
+int16_t BMI055::getTurnRateZ() {
+  I2Cdev::readBytes(devAddrGyr, BMI055_GYR_RATE_Z_LSB, 2, buffer);
+  return ((((int16_t)buffer[1]) << 8) | buffer[0]); 
+}
+
